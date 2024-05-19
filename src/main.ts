@@ -1,7 +1,9 @@
-import { createApp } from "vue";
-import "./style.css";
-import App from "./App.vue";
-import maskDateDirective from "./directives/mask-date";
-const app = createApp(App);
-app.directive("mask-date", maskDateDirective);
-app.mount("#app");
+import './assets/main.css'
+
+import { createApp } from 'vue'
+import App from './App.vue'
+import DateInput from './components/ui/DateInput.vue'
+const app = createApp(App)
+
+app.component("DateInput",DateInput)
+app.mount('#app')
