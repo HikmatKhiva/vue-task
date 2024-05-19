@@ -1,3 +1,4 @@
+<!-- Using iMask library  -->
 <!-- <template>
   <input ref="inputRef" v-model="formattedDate" @input="handleInput" :placeholder="mask" />
 </template>
@@ -84,14 +85,26 @@ const handleInput = (event: Event) => {
   emit('update:modelValue', format(value))
 }
 </script> -->
+<!-- Custom Mask -->
 <template>
-  <input ref="inputRef" v-model="formattedDate" @input="handleInput" :placeholder="mask" />
+  <input
+    ref="inputRef"
+    autocomplete="off"
+    aria-label="input-date"
+    v-model="formattedDate"
+    @input="handleInput"
+    :placeholder="mask"
+  />
 </template>
-
+<style scoped>
+input {
+  padding: 5px;
+}
+</style>
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import dayjs from 'dayjs'
-const REG_LANGTH_ENG = /^(\d{2})(\d{2})(\d{4})$/
+const REGEX = /^(\d{2})(\d{2})(\d{4})$/
 
 defineProps({
   modelValue: {
@@ -115,10 +128,9 @@ const format = (date: string) => {
   return parsedDate.isValid() ? parsedDate.format('YYYY/MM/DD') : ''
 }
 // const regEx = mask.value === 'en-US'  REG_LANGTH_ENG :
-const regEx = REG_LANGTH_ENG
 const handleInput = (event: Event) => {
   const inputEl = event.target as HTMLInputElement
-  const formattedValue = inputEl.value.replace(regEx, '$1/$2/$3')
+  const formattedValue = inputEl.value.replace(REGEX, '$1/$2/$3')
   if (inputEl.value.length > 10) return
   inputEl.value = inputEl.value.replace(/\D/g, '')
   const checkDate = dayjs(formattedValue, mask.value)
