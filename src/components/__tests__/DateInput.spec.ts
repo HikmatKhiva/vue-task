@@ -1,7 +1,6 @@
 import { mount } from '@vue/test-utils'
 import DateInput from '../ui/DateInput.vue'
 import { describe, expect, it } from 'vitest'
-
 describe('DateInput', () => {
   it('should update the v-model value when the input changes', async () => {
     const wrapper = mount(DateInput, {
@@ -21,7 +20,7 @@ describe('DateInput', () => {
     })
     const input = wrapper.find('input')
     await input.setValue('13/32/2023')
-    expect(wrapper.emitted('update:modelValue')?.[0]).toBeUndefined() // return empty string
+    expect(wrapper.emitted('update:modelValue')?.flat(1)[0]).toBeUndefined() // return empty string
   })
   it('changes the mask based on locale', async () => {
     const lang = {
