@@ -4,7 +4,8 @@ const date = ref<string>('')
 </script>
 <template>
   <div class="center">
-    <DateInput v-model="date" />
+    <input type="text" v-mask-date>
+    <!-- <DateInput v-model="date" /> -->
   </div>
 </template>
 
