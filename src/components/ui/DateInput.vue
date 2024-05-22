@@ -1,5 +1,5 @@
 <!-- Using iMask library  -->
-<template>
+<!-- <template>
   <input ref="inputRef" v-model="formattedDate" @input="handleInput" :placeholder="mask" />
 </template>
 
@@ -43,15 +43,18 @@ const handleInput = (event: Event) => {
   const date = format(inputElement.value)
   emit('update:modelValue', date)
 }
-</script> 
+</script>  -->
 
-<!-- <template>
-  <input ref="inputRef" v-model="formattedDate" @input="handleInput" :placeholder="mask" />
+<template>
+  <input ref="inputRef" v-model="formattedDate" maxlength="8" :placeholder="mask" />
+  <!-- @input="handleInput" -->
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, defineProps, defineEmits } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import dayjs from 'dayjs'
+import isLeapYear from 'dayjs/plugin/isLeapYear'
+dayjs.extend(isLeapYear)
 
 defineProps({
   modelValue: {
@@ -72,41 +75,53 @@ onMounted(() => {
 
 const format = (date: string) => {
   const parsedDate = dayjs(date, 'YYYY-MM-DD')
-  return parsedDate.isValid() ? parsedDate.format('YYYY/MM/DD') : ''
+  return parsedDate.isValid() ? parsedDate.format('YYYY/MM/DD') : undefined
 }
+const REGEX = /^(\d{2})(\d{2})(\d{4})$/
+watch(
+  () => formattedDate.value,
+  (n, o) => {
+    // Remove non-digit characters from the input
+    let value = n.replace(/\D/g, '')
+    // Check if the new value is different from the old value
+    if (value !== o) {
+      formattedDate.value = value
+    }
+    if (!isValid(formattedDate.value)) {
+      formattedDate.value = o
+    }
+    if (formattedDate.value.length === 8) {
+      formattedDate.value = formattedDate.value.replace(REGEX, '$1/$2/$3')
+      formattedDate.value = dayjs(formattedDate.value, mask.value).format(mask.value)
+      emit('update:modelValue', format(formattedDate.value))
+    }
+  },
+  { flush: 'pre' }
+)
 
-const handleInput = (event: Event) => {
-  const inputElement = event.target as HTMLInputElement
-  let value = inputElement.value.replace(/\D/g, '') // Remove non-numeric characters
-  if (value.length > 8) {
-    value = value.slice(0, 8) // Limit input to 8 characters (YYYY/MM/DD)
+function isValid(date: string): boolean {
+  const day = mask.value !== 'MM/DD/YYYY' ? date.slice(0, 2) : date.slice(2, 4)
+  const month = mask.value === 'MM/DD/YYYY' ? date.slice(0, 2) : date.slice(2, 4)
+  if (parseInt(day) > 31) {
+    return false
   }
-  const formattedValue = value.replace(/(\d{4})(\d{2})(\d{2})/, '$1/$2/$3') // Apply date format (YYYY/MM/DD)
-  inputElement.value = formattedValue
-  emit('update:modelValue', format(value))
+  if (
+    dayjs(month).format('MM') === 'Invalid Date' ||
+    (parseInt(day) > 29 && dayjs(month).format('MM') == '02')
+  ) {
+    return false
+  }
+  if (date.length === 8 && dayjs(date.slice(4, 8)).format('YYYY') === 'Invalid Date') {
+    return false
+  }
+  return true
 }
 </script>
-<!-- Custom Mask -->
-
-<!-- <template>
-  <input
-    ref="inputRef"
-    autocomplete="off"
-    aria-label="input-date"
-    v-model="formattedDate"
-    @input="handleInput"
-    :placeholder="mask"
-  />
-</template>
-<style scoped>
-input {
-  padding: 5px;
-}
-</style>
-<script setup lang="ts">
-import { ref, onMounted } from 'vue'
+<!-- <script setup lang="ts">
+import { ref, onMounted, watch } from 'vue'
 import dayjs from 'dayjs'
-const REGEX = /^(\d{2})(\d{2})(\d{4})$/
+import isLeapYear from 'dayjs/plugin/isLeapYear'
+dayjs.extend(isLeapYear)
 
 defineProps({
   modelValue: {
@@ -119,43 +134,72 @@ const emit = defineEmits(['update:modelValue'])
 const inputRef = ref<HTMLInputElement | null>(null)
 const mask = ref<string>('')
 const formattedDate = ref<string>('')
+
 onMounted(() => {
   const locale = navigator.language || 'en-US'
   mask.value = locale === 'en-US' ? 'MM/DD/YYYY' : 'DD/MM/YYYY'
 })
-const minDate = dayjs('1900-01-01', 'YYYY-MM-DD')
-const maxDate = dayjs(new Date().getFullYear() + '-12-31', 'YYYY-MM-DD')
+
 const format = (date: string) => {
   const parsedDate = dayjs(date, 'YYYY-MM-DD')
-  return parsedDate.isValid() ? parsedDate.format('YYYY/MM/DD') : ''
+  return parsedDate.isValid() ? parsedDate.format('YYYY/MM/DD') : undefined
 }
-const handleInput = (event: Event) => {
-  const inputEl = event.target as HTMLInputElement
-  const formattedValue = inputEl.value.replace(REGEX, '$1/$2/$3')
-  inputEl.value = inputEl.value.replace(/\D/g, '')
-  const checkDate = dayjs(formattedValue, mask.value)
-  inputEl.value = dateValidate(inputEl.value)
 
-  if (mask.value === 'MM/DD/YYYY') {
-    // parseInt(inputEl.value.slice(0, 2)) > 12
-  }
-  if (formattedValue.length === 10) {
-    if (checkDate.isValid() && checkDate.isBefore(maxDate) && checkDate.isAfter(minDate)) {
-      emit('update:modelValue', format(formattedValue))
+const REGEX = /^(\d{2})(\d{2})(\d{4})$/
+watch(
+  () => formattedDate.value,
+  (n, o) => {
+    const validFun = mask.value === 'MM/DD/YYYY' ? isValidUs : isValid
+    // Remove non-digit characters from the input
+    let value = n.replace(/\D/g, '')
+    // Check if the new value is different from the old value
+    if (value !== o) {
+      formattedDate.value = value
     }
+    if (!validFun(formattedDate.value)) {
+      formattedDate.value = o
+    }
+    if (formattedDate.value.length === 8) {
+      formattedDate.value = formattedDate.value.replace(REGEX, '$1/$2/$3')
+      formattedDate.value = dayjs(formattedDate.value, mask.value).format(mask.value)
+      emit('update:modelValue', format(formattedDate.value))
+    }
+  },{
+    flush:"pre"
   }
+)
+
+function isValid(date: string): boolean {
+  if (parseInt(date.slice(0, 2)) > 31) {
+    return false
+  }
+  if (
+    (!isNaN(parseInt(date.slice(2, 4))) &&
+      dayjs(date.slice(2, 4)).format('MM') === 'Invalid Date') ||
+    (parseInt(date.slice(0, 2)) > 29 && dayjs(date.slice(2, 4)).format('MM') == '02')
+  ) {
+    return false
+  }
+  if (date.length === 8 && dayjs(date.slice(4, 8)).format('YYYY') === 'Invalid Date') {
+    return false
+  }
+  return true
 }
+function isValidUs(date: string): boolean {
+  if (parseInt(date.slice(2, 4)) > 31 && date.slice(2, 4).length) {
+    return false
+  }
 
-function dateValidate(value: string): string {
-  const minDate = 1990
-  const maxDate = new Date().getFullYear() + 1
-  let dateValue: string = value
-
-  const month = value.slice(0, 2)
-  const day = value.slice(2, 4)
-  const year = value.slice(4, 8)
-  console.log(+month < 12)
-
-  return dateValue
+  if (
+    (dayjs(date.slice(0, 2)).format('MM') === '02' && parseInt(date[2]) > 2) ||
+    dayjs(date.slice(0, 2)).format('MM') === 'Invalid Date'
+  ) {
+    return false
+  }
+  if (date.length === 8 && dayjs(date.slice(4, 8)).format('YYYY') === 'Invalid Date') {
+    return false
+  }
+  return true
 }
 </script> -->
+<!-- Custom Mask -->
