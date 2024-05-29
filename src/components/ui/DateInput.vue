@@ -150,8 +150,11 @@ function parse(str: string) {
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
 import dayjs from 'dayjs'
+import isLeapYear from 'dayjs/plugin/isLeapYear'
+const emit = defineEmits(['update:modelValue'])
+dayjs.extend(isLeapYear)
+import { onMounted, ref } from 'vue'
 const formattedDate = ref<string>('')
 const oldValue = ref<string>('')
 const mask = ref<string>('')
@@ -165,6 +168,8 @@ const updateDate = (event: Event) => {
   inputDate.value = inputDate.value.replace(/\D/g, '')
   if (inputDate.value.length === 8 && parsedDate.isValid()) {
     inputDate.value = inputDate.value.replace(REGEX, '$1/$2/$3')
+    formattedDate.value = inputDate.value
+    emit('update:modelValue', format(formattedDate.value))
   }
   if (isValid(inputDate.value)) {
     inputDate.value = inputDate.value
@@ -177,10 +182,11 @@ const config = {
   minYear: 1990,
   maxYear: 2020
 }
+
 function isValid(date: string): boolean {
   const day = mask.value !== 'MM/DD/YYYY' ? date.slice(0, 2) : date.slice(2, 4)
   const month = mask.value === 'MM/DD/YYYY' ? date.slice(0, 2) : date.slice(2, 4)
-  const year = date.slice(4, 8)
+  const year = date.slice(6, 10)
   if (date.length === 0) {
     return true
   }
@@ -188,7 +194,7 @@ function isValid(date: string): boolean {
   if (dayjs(month).format('MM') === 'Invalid Date') {
     return false
   }
-  // Check if the day is valid
+  // Check if the day is valid over 29
   if (
     (parseInt(day[1]) < 1 && day[0] === '0') ||
     parseInt(day) > 31 ||
@@ -197,16 +203,16 @@ function isValid(date: string): boolean {
     return false
   }
   // Check if the year is valid
-  if (
-    (date.length === 8 && dayjs(year).format('YYYY') === 'Invalid Date') ||
-    parseInt(date[4]) < 1 ||
-    parseInt(date[4]) > 2
-  ) {
+  if (year.length === 4 && (parseInt(year) < config.minYear || parseInt(year) > config.maxYear)) {
     return false
   }
-  if ((year.length === 4 && parseInt(year) < config.minYear) || parseInt(year) > config.maxYear) {
+  if (date.length === 10 && !dayjs(date, mask.value).isLeapYear()) {
     return false
   }
   return true
+}
+function format(date: string) {
+  const parsedDate = dayjs(date, 'YYYY-MM-DD')
+  return parsedDate.isValid() ? parsedDate.format('YYYY/MM/DD') : ''
 }
 </script>
